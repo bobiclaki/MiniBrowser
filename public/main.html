@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        input, textarea {
+            outline: none;
+            border: none;
+        }
+        ul, li {
+            list-style-type: none;
+            margin-block-start: 0;
+            margin-block-end: 0;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            padding-inline-start: 0px;
+        }
+
+        body {
+            color: #e8e8e8;
+            font-family: 'Open Sans', sans-serif;
+            background: #06070d;
+        }
+
+        .main {
+            display: flex;
+            margin: 25% 0 0 0;
+            position: absolute;
+            left: 50%;
+            align-items: center;
+            flex-direction: column;
+            transform: translateX(-50%);
+        }
+
+        .main .m-title {
+            margin: 16px 0 0 0;
+            color: #858585;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .main input {
+            padding: 8px 14px;
+            width: 512px;
+            color: #e8e8e8;
+            border-bottom: 1px solid #7579ff;
+            box-shadow: 0px 5px 10px 0px #ffffff35;
+            background: transparent;
+            transition: .2s;
+        }
+        .main input:focus {
+            background: #ffffff25;
+        }
+
+        .main .history {
+            display: flex;
+            margin: 8px 0 0 0;
+            align-items: center;
+            flex-direction: column;
+        }
+        .main .history li {
+            cursor: pointer;
+            display: flex;
+            margin: 4px 0;
+            padding: 8px 16px;
+            max-width: 90%;
+            width: 100%;
+            min-width: 540px;
+            color: #979797;
+            font-size: 14px;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 5px;
+            background: #ffffff25;
+            transition: .2s;
+        }
+        .main .history li:hover {
+            transform: scale(1.05);
+        }
+        .main .history li img {
+            width: 16px;
+            height: 16px;
+            margin: 0 8px 0 0;
+        }
+        .main .history li div {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .main .history li span {
+            color: #e8e8e8;
+            font-size: 10px;
+        }
+
+        ::-webkit-scrollbar-button {
+            background-repeat: no-repeat;
+            width: 4px;
+            height: 0px;
+        }   
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+        }   
+        ::-webkit-scrollbar-thumb {
+            -webkit-border-radius: 0px;
+            border-radius: 0px;
+            background-color: #e8e8e8;
+        }   
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #e8e8e8;
+        }   
+        ::-webkit-resizer {
+            background-repeat: no-repeat;
+            width: 5px;
+            height: 0px;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            background: #06070d;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="main">
+        <input type="text" name="url" placeholder="Search">
+        <div class="m-title">История</div>
+        <ul class="history"></ul>
+    </div>
+
+    <script>
+
+        const { ipcRenderer, remote, shell, BrowserWindow, screen } = require('electron');
+
+        function isHttp(string) {
+            let url;
+        
+            try { url = new URL(string) }
+            catch { return false }
+
+            return url.protocol === "http:" || url.protocol === "https:";
+        }
+
+        function validURL(str) {
+            var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+                '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+                '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+                '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+                '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+                '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+            return !!pattern.test(str);
+        }
+
+        document.querySelector(".main input").addEventListener("keyup", function(event) {
+            if (event.keyCode === 13) {
+                let url = event.target.value;
+                ipcRenderer.send('ipcOn', {
+                    type: 'openURL',
+                    data: { url: validURL(url) ? isHttp(url) ? url : `http://${url}` : `https://yandex.ru/search/?text=${url}` }
+                })
+                event.target.value = ''
+            }
+        });
+
+        ipcRenderer.send('ipcOn', { type: 'getHistory' })
+
+        ipcRenderer.on('loadHistory', (event, data) => {
+            for (let site of data) {
+                document.querySelector('.main .history').insertAdjacentHTML('beforeend', `
+<li onclick="ipcRenderer.send('ipcOn', { type: 'openURL', data: { url: '${site.url}' } })">
+    <div style="display: flex; align-items: center;">
+        <img src="https://www.google.com/s2/favicons?domain=${site.url}">
+        <div>${site.url}</div>    
+    </div>
+    <span>12.12.2021</span>           
+</li>`)
+            }
+        })
+
+    </script>
+
+</body>
+</html>
